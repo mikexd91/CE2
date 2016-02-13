@@ -1,0 +1,17 @@
+clear
+display
+add Hello World!
+add My name is Abdulla Contractor :D
+display
+add OR IS IT!?
+add DHUN! DHUN! DHUN!
+display
+delete 4
+display
+add DHUN! DHUN! DHUN!
+clear
+display
+add Who am I!
+add Where am I!
+add Get away from me!!
+display
