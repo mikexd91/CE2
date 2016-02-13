@@ -3,6 +3,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -48,7 +50,7 @@ public class TextBuddy{
 	
 	private static File file;
 	private static Scanner sc;
-	private static ArrayList<String> texts;
+	public ArrayList<String> texts;
 	
 	private static final String BAD_ARGUMENTS = "BAD ARGUMENT";
 	private static final String WELCOME = "WELCOME TO TEXTBUDDY! %s is ready for use.";
@@ -69,12 +71,24 @@ public class TextBuddy{
 	enum COMMAND_INPUT{
 		ADD,DISPLAY,DELETE,CLEAR,EXIT,INVALID,SORT,SEARCH
 	};
+	
+	private Path path;
+	
+	public TextBuddy(){
+		path = Paths.get("testfile.txt");
+		texts = new ArrayList<String>();
+	}
+	public TextBuddy(Path _path){
+		path = _path;
+		texts = new ArrayList<String>();
+	}
 
 	public static void main(String[] args) throws IOException{
 		exitIfIncorrectArguments(args);
-		setEnvironment(args[0]);
-		printWelcomeMessage(args[0]);
-		executeCommandsUntilExitCommand();
+		TextBuddy buddy = new TextBuddy(Paths.get(args[0]));
+		buddy.setEnvironment();
+		buddy.printWelcomeMessage();
+		buddy.executeCommandsUntilExitCommand();
 	}
 	
 	/**
@@ -122,18 +136,18 @@ public class TextBuddy{
 		System.exit(0);
 	}
 	
-	private static void setEnvironment(String fileName){
-		setUpForInput(fileName);
+	private void setEnvironment(){
+		setUpForInput();
 		readFromFile(file);
 	}
 	
-	private static void setUpForInput(String filename){
+	private void setUpForInput(){
 		texts = new ArrayList<String>();
-		file = new File(filename);
+		file = new File(path.toString());
 		sc = new Scanner(System.in);
 	}
 	
-	private static void readFromFile(File file){
+	private void readFromFile(File file){
 		try{
 			FileInputStream fis = new FileInputStream(file);
 			InputStreamReader isr = new InputStreamReader(fis);
@@ -149,16 +163,17 @@ public class TextBuddy{
 		}
 	}
 	
-	private static void printWelcomeMessage(String fileName){
-		outputMessage(WELCOME,fileName);
+	private void printWelcomeMessage(){
+		outputMessage(WELCOME,path.toString());
 	}
 	
-	private static void executeCommandsUntilExitCommand() throws IOException{
+	private void executeCommandsUntilExitCommand() throws IOException{
 	
 		   while (true) {
 		 		outputMessage(NEXT_COMMAND_MESSAGE);
 		 		String userCommand = sc.nextLine().trim();
 		 		executeCommand(userCommand);
+		 		writeToFile();
 		 	}
 	}
 	
@@ -180,7 +195,7 @@ public class TextBuddy{
 		return userCommand.toLowerCase();
 	}
 	
-	public static void executeCommand(String userCommand) throws IOException{
+	public void executeCommand(String userCommand) throws IOException{
 
 		String commandTypeString = getFirstWord(userCommand);
         String lowerCaseCommand = getLowerCase(commandTypeString);
@@ -213,7 +228,7 @@ public class TextBuddy{
 			//throw an error if the command is not recognized
 			throw new Error("Unrecognized command type");
 		}
-		writeToFile();
+		
 	}
 	
 	private static COMMAND_INPUT determineCommandType(String commandTypeString) {
@@ -244,33 +259,33 @@ public class TextBuddy{
 		return line.substring(spaceIndex+1);
 	}
 	
-	private static void addMessage(String line){
+	private void addMessage(String line){
 		if(line == null)
 			return;	
 		String commandWithoutKeyword = removeCommandKeyword(line);
 		texts.add(commandWithoutKeyword);
-		outputMessage(ADD_MESSAGE,file.getName(),commandWithoutKeyword);
+		outputMessage(ADD_MESSAGE,path.toString(),commandWithoutKeyword);
 	}
 	
-	private static void displayMessage(){
+	private void displayMessage(){
 		checkForEmptyFile();
 		for(int i = 0; i < texts.size(); i++){
 			outputMessage(DISPLAY_MESSAGE, i+1, texts.get(i));
 		}
 	}
-	private static void displayMessage(ArrayList<String> list){
+	private void displayMessage(ArrayList<String> list){
 		checkForEmptyFile();
 		for(int i = 0; i < list.size(); i++){
 			outputMessage(DISPLAY_MESSAGE, i+1, list.get(i));
 		}
 	}
 	
-	private static void sortMessage(){
+	private void sortMessage(){
 		Collections.sort(texts,String.CASE_INSENSITIVE_ORDER);
 		displayMessage();
 	}
 	
-	private static void searchMessage(String word){
+	private void searchMessage(String word){
 		String commandWithoutKeyword = removeCommandKeyword(word);
 		ArrayList<String> tempList = new ArrayList<String>();
 		for(String line :texts){
@@ -282,13 +297,13 @@ public class TextBuddy{
 	}
 	
 
-	private static void checkForEmptyFile() {
+	private void checkForEmptyFile() {
 		if(texts.size()== 0){
 	        outputMessage(EMPTY_FILE_MESSAGE,file.getName());
 		}
 	}
 	
-	private static void deleteMessage(String userInput){
+	private void deleteMessage(String userInput){
 		String commandWithoutKeyword = removeCommandKeyword(userInput);
 		if(texts.size() == 0){
 			outputMessage(DELETE_EMPTY);
@@ -307,7 +322,7 @@ public class TextBuddy{
 		return INVALID_INDEX;
 	}
 	
-	private static void removeTextAtIndex(int index){
+	private void removeTextAtIndex(int index){
 		if(index == INVALID_INDEX){
 			return;
 		}
@@ -320,12 +335,12 @@ public class TextBuddy{
 		}
 	}
 	
-	private static void clearTexts(){
+	private void clearTexts(){
 		texts.clear();
 		outputMessage(CLEAR_MESSAGE,file.getName());
 	}
 	
-	private static void writeToFile() throws IOException{
+	private void writeToFile() throws IOException{
 		try{
 			FileOutputStream fos = new FileOutputStream(file);
 			OutputStreamWriter osw = new OutputStreamWriter(fos);

@@ -1,4 +1,6 @@
 import static org.junit.Assert.*;
+
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.junit.Test;
@@ -33,7 +35,13 @@ public class junitTest1 {
 		TextBuddy buddy = new TextBuddy();
 		expectedList.clear();
 		populateList(1);
-		assertEquals(String.format(ADD_MESSAGE, buddy.executeCommand("add 2"));
+		try {
+			buddy.executeCommand("add 1");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		assertEquals(expectedList,buddy.texts);
 	}
 
 }
