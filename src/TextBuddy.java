@@ -3,6 +3,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.io.IOException;
@@ -13,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 
 /**
  * This class can be used to add, delete, clear, 
@@ -51,6 +54,7 @@ public class TextBuddy{
 	private static File file;
 	private static Scanner sc;
 	public ArrayList<String> texts;
+	public ArrayList<String> tempList;
 	
 	private static final String BAD_ARGUMENTS = "BAD ARGUMENT";
 	private static final String WELCOME = "WELCOME TO TEXTBUDDY! %s is ready for use.";
@@ -63,7 +67,9 @@ public class TextBuddy{
 	private static final String PARAMETER_NOT_NUMBER = "\"%s\" is not a number";
 	private static final String INVALID_INDEX_MESSAGE = "%d is an invalid index";
 	private static final String DELETE_EMPTY = "No content to delete";
-    
+    private static final String INVALID_SEARCH_WORD = "No such word can be found!";
+    private static final String EXIT_MESSAGE = "exit";
+	
 	//This is to indicate there is no existing index in the arraylist
 	private static final int INVALID_INDEX = -1;
 	
@@ -72,15 +78,17 @@ public class TextBuddy{
 		ADD,DISPLAY,DELETE,CLEAR,EXIT,INVALID,SORT,SEARCH
 	};
 	
-	private Path path;
+	private static Path path;
 	
 	public TextBuddy(){
 		path = Paths.get("testfile.txt");
 		texts = new ArrayList<String>();
+		tempList = new ArrayList<String>();
 	}
 	public TextBuddy(Path _path){
 		path = _path;
 		texts = new ArrayList<String>();
+		tempList = new ArrayList<String>();
 	}
 
 	public static void main(String[] args) throws IOException{
@@ -89,6 +97,7 @@ public class TextBuddy{
 		buddy.setEnvironment();
 		buddy.printWelcomeMessage();
 		buddy.executeCommandsUntilExitCommand();
+		buddy.writeToFile();
 	}
 	
 	/**
@@ -125,6 +134,7 @@ public class TextBuddy{
 		if(!f.exists()){
 			try{
 				f.createNewFile();
+				
 		    }catch(IOException e){
 			    ErrorMessageAndExit("Cannot create file");
 		    }
@@ -152,12 +162,13 @@ public class TextBuddy{
 			FileInputStream fis = new FileInputStream(file);
 			InputStreamReader isr = new InputStreamReader(fis);
 			BufferedReader br = new BufferedReader(isr);
-			String line;
 			
-			while(br.readLine()!=null){
-				line = br.readLine();
+			String line = br.readLine();
+			while(line!=null){
 				texts.add(line);
+				line = br.readLine();
 			}
+			br.close();
 		}catch(IOException e){
 			ErrorMessageAndExit("Error reading from file");
 		}
@@ -168,12 +179,14 @@ public class TextBuddy{
 	}
 	
 	private void executeCommandsUntilExitCommand() throws IOException{
-	
-		   while (true) {
+	       String line = null;
+		   while (line!="exit") {
 		 		outputMessage(NEXT_COMMAND_MESSAGE);
 		 		String userCommand = sc.nextLine().trim();
-		 		executeCommand(userCommand);
-		 		writeToFile();
+		 		line = executeCommand(userCommand);
+		 		if((line != null) && (line != "exit")){
+					outputMessage(line);
+				}
 		 	}
 	}
 	
@@ -195,7 +208,7 @@ public class TextBuddy{
 		return userCommand.toLowerCase();
 	}
 	
-	public void executeCommand(String userCommand) throws IOException{
+	public String executeCommand(String userCommand) throws IOException{
 
 		String commandTypeString = getFirstWord(userCommand);
         String lowerCaseCommand = getLowerCase(commandTypeString);
@@ -203,27 +216,21 @@ public class TextBuddy{
 
 		switch (commandType) {
 		case ADD:
-			addMessage(userCommand);
-			break;
+			return addMessage(userCommand);
 		case DISPLAY:
-			displayMessage();
-			break;
+			return displayMessage();
 		case DELETE:
-			deleteMessage(userCommand);
-			break;
+			return deleteMessage(userCommand);
 		case CLEAR:
-			clearTexts();
-			break;
+			return clearTexts();
 		case INVALID:
-			return;
+			return null;
 		case SORT:
-			sortMessage();
-			break;
+			return sortMessage();
 		case SEARCH:
-			searchMessage(userCommand);
-			break;
+			return searchMessage(userCommand);
 		case EXIT:
-			System.exit(0);
+			return EXIT_MESSAGE;
 		default:
 			//throw an error if the command is not recognized
 			throw new Error("Unrecognized command type");
@@ -259,19 +266,27 @@ public class TextBuddy{
 		return line.substring(spaceIndex+1);
 	}
 	
-	private void addMessage(String line){
-		if(line == null)
-			return;	
+	private String addMessage(String line){
+		if(line == null){
+			try {
+				executeCommandsUntilExitCommand();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+		}
 		String commandWithoutKeyword = removeCommandKeyword(line);
 		texts.add(commandWithoutKeyword);
-		outputMessage(ADD_MESSAGE,path.toString(),commandWithoutKeyword);
+		return String.format(ADD_MESSAGE,path.toString(),commandWithoutKeyword);
 	}
 	
-	private void displayMessage(){
+	private String displayMessage(){
 		checkForEmptyFile();
 		for(int i = 0; i < texts.size(); i++){
 			outputMessage(DISPLAY_MESSAGE, i+1, texts.get(i));
 		}
+		return null;
 	}
 	private void displayMessage(ArrayList<String> list){
 		checkForEmptyFile();
@@ -280,20 +295,22 @@ public class TextBuddy{
 		}
 	}
 	
-	private void sortMessage(){
+	private String sortMessage(){
 		Collections.sort(texts,String.CASE_INSENSITIVE_ORDER);
-		displayMessage();
+		return displayMessage();
 	}
 	
-	private void searchMessage(String word){
+	private String searchMessage(String word){
 		String commandWithoutKeyword = removeCommandKeyword(word);
-		ArrayList<String> tempList = new ArrayList<String>();
+		tempList = new ArrayList<String>();
 		for(String line :texts){
 		    if(line.contains(commandWithoutKeyword))	{
 		    	tempList.add(line);
 				displayMessage(tempList);
+				return null;
 		    }
 		}
+		return String.format(INVALID_SEARCH_WORD);
 	}
 	
 
@@ -303,14 +320,17 @@ public class TextBuddy{
 		}
 	}
 	
-	private void deleteMessage(String userInput){
+	private String deleteMessage(String userInput){
 		String commandWithoutKeyword = removeCommandKeyword(userInput);
 		if(texts.size() == 0){
-			outputMessage(DELETE_EMPTY);
-			return;
+			return DELETE_EMPTY;
 		}
 		int index = getIndex(commandWithoutKeyword);
-		removeTextAtIndex(index);
+		return removeTextAtIndex(index);
+	}
+	
+	String showPath(){
+		return path.toString();
 	}
 	
 	private static int getIndex(String line){
@@ -322,34 +342,31 @@ public class TextBuddy{
 		return INVALID_INDEX;
 	}
 	
-	private void removeTextAtIndex(int index){
+	private String removeTextAtIndex(int index){
 		if(index == INVALID_INDEX){
-			return;
+			return String.format(INVALID_INDEX_MESSAGE);
 		}
 		try{
 			String content = texts.get(index);
 			texts.remove(index);
-			outputMessage(DELETE_MESSAGE,file.getName(),content);
+			return String.format(DELETE_MESSAGE,path.toString(),content);
 		}catch(IndexOutOfBoundsException e){
-			outputMessage(INVALID_INDEX_MESSAGE,index,1,texts.size());
+			return String.format(INVALID_INDEX_MESSAGE,index,1,texts.size());
 		}
 	}
 	
-	private void clearTexts(){
+	private String clearTexts(){
 		texts.clear();
-		outputMessage(CLEAR_MESSAGE,file.getName());
+		return String.format(CLEAR_MESSAGE,path.toString());
 	}
 	
 	private void writeToFile() throws IOException{
 		try{
-			FileOutputStream fos = new FileOutputStream(file);
-			OutputStreamWriter osw = new OutputStreamWriter(fos);
-			BufferedWriter bw = new BufferedWriter(osw);
-			for(String line: texts){
-				bw.write(line);
-				bw.newLine();
+			PrintWriter writer = new PrintWriter(path.toString());
+			for (String line : texts) {
+				writer.println(line);
 			}
-			bw.close();
+			writer.close();
 		}catch(FileNotFoundException e){
 		}
 	}
